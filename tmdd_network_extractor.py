@@ -38,7 +38,7 @@ def build_update_time():
 
 def build_tmdd_map(model, organization_id, network_id, network_name):
     def build_node_inventory_element(junction_object):
-        print "starting node inventory"
+        #print "starting node inventory"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -49,7 +49,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element
 
     def build_node_status_element(junction_object):
-        print "starting node status"
+        #print "starting node status"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -60,13 +60,13 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element 
 
     def build_link_inventory_element(section_object):
-        print "starting link inventory"
+        #print "starting link inventory"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
         element['link-id'] = str(section_object.getId())  # Required 
         element['link-name'] = section_object.getName()
-        element['link-type'] = str(section_object.getRoadType())  # Required
+        element['link-type'] = section_object.getRoadType().getName().lower()  # Required
         begin_node = section_object.getOrigin()
         if begin_node is not None:
             element['link-begin-node-id'] = str(begin_node.getId())  # Required
@@ -88,7 +88,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element
 
     def build_link_status_element(section_object):
-        print "starting link status"
+        #print "starting link status"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -126,7 +126,7 @@ def build_json(model, path, organization_id, network_id, network_name):
 
     tmdd_json = json.dumps(tmdd_map, indent=2)
 
-    tmdd_path = path + separator() + 'tmdd.json'
+    tmdd_path = path + separator() + 'tmdd_1.json'
     print 'Writing', tmdd_path
     with open (tmdd_path, 'w') as text_file:
         text_file.write(tmdd_json)
@@ -134,6 +134,6 @@ def build_json(model, path, organization_id, network_id, network_name):
 gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
-path='C:\Users\Serena\connected_corridors\tmdd_network\tmdd_network\data'
+path='C:\Users\Serena\connected_corridors\\tmdd_network\data'
 
 build_json(model, path, 'connected_corridors', '409', 'tmdd_network')
