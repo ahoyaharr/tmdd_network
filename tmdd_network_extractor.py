@@ -17,7 +17,7 @@ UNIX_ENCODING = '/'
 
 SYSTEM_TYPE = 'windows'
 
-MPH_CONSTANT = 0.62137119 #multiply km/hr to convert to mph
+MPH_CONSTANT = 0.62137119 # multiply km/hr to convert to mph
 
 translator = GKCoordinateTranslator(model)    
 
@@ -30,24 +30,6 @@ def build_geolocation(translator, coordinate_pair):
     coordinate = translator.toDegrees(coordinate_pair)
     return {'longitude': coordinate.x, 'latitude': coordinate.y}
 
-def get_heading(origin, destination):
-    """
-    Computes the heading between the origin and destination in degrees given the geolocation endpoints
-    of the section as dictionaries of lat and lon.
-    Zero degrees is true north, increments clockwise.
-    """
-    dlon = math.radians(destination['lon'])
-    dlat = math.radians(destination['lat'])
-    olon = math.radians(origin['lon'])
-    olat = math.radians(origin['lat'])
-
-    y = math.sin(dlon - olon) * math.cos(dlat)
-    x = math.cos(olat) * math.sin(dlat) - \
-        math.sin(olat) * math.cos(dlat) * math.cos(dlon - olon)
-    prenormalized = math.atan2(y, x) * 180 / math.pi
-
-    return (prenormalized + 360) % 360 # map result to [0, 360) degrees
-
 def build_organization_information(organization_id):
     return {'organization-id': organization_id}
 
@@ -56,6 +38,7 @@ def build_update_time():
 
 def build_tmdd_map(model, organization_id, network_id, network_name):
     def build_node_inventory_element(junction_object):
+        print "starting node inventory"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -66,6 +49,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element
 
     def build_node_status_element(junction_object):
+        print "starting node status"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -76,18 +60,27 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element 
 
     def build_link_inventory_element(section_object):
+        print "starting link inventory"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
         element['link-id'] = str(section_object.getId())  # Required 
-        element['link-name'] = section['name'] = section_object.getName()
+        element['link-name'] = section_object.getName()
         element['link-type'] = str(section_object.getRoadType())  # Required
         begin_node = section_object.getOrigin()
-        element['link-begin-node-id'] = str(begin_node.getId())  # Required
-        element['link-begin-node-location'] = build_geolocation(translator, begin_node.getPosition())  # Required
+        if begin_node is not None:
+            element['link-begin-node-id'] = str(begin_node.getId())  # Required
+            element['link-begin-node-location'] = build_geolocation(translator, begin_node.getPosition())  # Required
+        else:
+            element['link-begin-node-id'] = 'None'
+            element['link-begin-node-location'] = {'latitude': 0.0, 'longitude': 0.0}
         end_node = section_object.getDestination()
-        element['link-end-node-id'] = str(end_node.getId())  # Required
-        element['link-end-node-location'] = build_geolocation(translator, end_node.getPosition())  # Required
+        if end_node is not None:
+            element['link-end-node-id'] = str(end_node.getId())  # Required
+            element['link-end-node-location'] = build_geolocation(translator, end_node.getPosition())  # Required
+        else:
+            element['link-end-node-id'] = 'None'
+            element['link-end-node-location'] = {'latitude': 0.0, 'longitude': 0.0}
         element['link-speed-limit'] = section_object.getSpeed() * MPH_CONSTANT
         element['link-speed-limit-units'] = "miles per hour"
         element['last-update-time'] = build_update_time()
@@ -95,6 +88,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element
 
     def build_link_status_element(section_object):
+        print "starting link status"
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -140,6 +134,6 @@ def build_json(model, path, organization_id, network_id, network_name):
 gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
-path='C:\Users\Serena\connected_corridors\TrafficNetwork\data'
+path='C:\Users\Serena\connected_corridors\tmdd_network\tmdd_network\data'
 
-build_json(model, path, 'connected_corridors', '409', '1', 'tmdd_network')
+build_json(model, path, 'connected_corridors', '409', 'tmdd_network')
