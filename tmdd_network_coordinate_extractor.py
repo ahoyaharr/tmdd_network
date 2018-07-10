@@ -1,7 +1,7 @@
 import os
 import sys
 import json
-
+import csv
 
 def separator():
     UNIX_ENCODING = '/'
@@ -43,7 +43,7 @@ def export(header, data, filename):
         # Each row must be a dictionary, and the keys of the dictionary must be aligned with the header.
         assert len(header) == len(row.keys()) and type(row) is dict
 
-    filepath = get_script_path('exports') + separator() + filename + '.csv'
+    filepath = get_script_path('data') + separator() + filename + '.csv'
     with open(filepath, 'w', newline='\n') as csvfile:
         f = csv.DictWriter(csvfile, fieldnames=header, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
