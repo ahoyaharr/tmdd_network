@@ -1,10 +1,12 @@
 import os
 import sys
+import json
 
 
 def separator():
     UNIX_ENCODING = '/'
-    return UNIX_ENCODING
+    WINDOWS_ENCODING = '\\'
+    return WINDOWS_ENCODING
 
 def get_script_path(p):
     return os.path.dirname(os.path.realpath(sys.argv[0])) + separator() + p
@@ -41,7 +43,7 @@ def export(header, data, filename):
         # Each row must be a dictionary, and the keys of the dictionary must be aligned with the header.
         assert len(header) == len(row.keys()) and type(row) is dict
 
-    filepath = p.get_script_path('exports') + p.separator() + filename + '.csv'
+    filepath = get_script_path('exports') + separator() + filename + '.csv'
     with open(filepath, 'w', newline='\n') as csvfile:
         f = csv.DictWriter(csvfile, fieldnames=header, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
@@ -50,8 +52,8 @@ def export(header, data, filename):
             f.writerow(row)
 
 
-tmdd_object_system = json.loads(json_strings['tmdd'])
-link_inventory = tmdd_object_system['LinkInventory']
+tmdd_object_system = json.loads(get_JSON_strings()['tmdd'])
+link_inventory = tmdd_object_system['LinkInventory']['link-inventory-list']
 
 data = []
 for count, link in enumerate(link_inventory):
