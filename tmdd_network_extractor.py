@@ -23,10 +23,10 @@ translator = GKCoordinateTranslator(model)
 
 
 def build_geolocation(translator, coordinate_pair):
-    """
+    '''
     Converts an untranslated coordinate pair into a dictionary
     mapping 'lon'/'lat' -> coordinate value.
-    """
+    '''
     coordinate = translator.toDegrees(coordinate_pair)
     return {'longitude': coordinate.x, 'latitude': coordinate.y}
 
@@ -38,7 +38,7 @@ def build_update_time():
 
 def build_tmdd_map(model, organization_id, network_id, network_name):
     def build_node_inventory_element(junction_object):
-        print "starting node inventory"
+        print 'starting node inventory'
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -49,7 +49,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element
 
     def build_node_status_element(junction_object):
-        print "starting node status"
+        print 'starting node status'
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -60,7 +60,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         return element 
 
     def build_link_inventory_element(section_object):
-        print "starting link inventory"
+        print 'starting link inventory'
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -82,13 +82,15 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             element['link-end-node-id'] = 'None'
             element['link-end-node-location'] = {'latitude': 0.0, 'longitude': 0.0}
         element['link-speed-limit'] = section_object.getSpeed() * MPH_CONSTANT
-        element['link-speed-limit-units'] = "miles per hour"
+        element['link-speed-limit-units'] = 'miles per hour'
         element['last-update-time'] = build_update_time()
         element['link-geom-location'] = [build_geolocation(translator, point) for point in section_object.calculatePolyline()]
+        element['link-geom-location'].append(element['link-end-node-location'])
+        element['link-geom-location'].insert(0, element['link-begin-node-location'])
         return element
 
     def build_link_status_element(section_object):
-        print "starting link status"
+        print 'starting link status'
         element = dict()
         element['network-id'] = network_id  # Required
         element['network-name'] = network_name  # Required
@@ -103,20 +105,24 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
     node_inventory = []
     node_status = []
 
-    for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKSection")):
+    for types in model.getCatalog().getUsedSubTypesFromType(model.getType('GKSection')):
         for section_object in types.itervalues():
             link_inventory.append(build_link_inventory_element(section_object))
             link_status.append(build_link_status_element(section_object))
 
-    for types in model.getCatalog().getUsedSubTypesFromType(model.getType("GKNode")):
+    for types in model.getCatalog().getUsedSubTypesFromType(model.getType('GKNode')):
         for junction_object in types.itervalues():
             node_inventory.append(build_node_inventory_element(junction_object))
             node_status.append(build_node_status_element(junction_object))
 
-    return {'LinkInventory': link_inventory,
-            'LinkStatus': link_status,
-            'NodeInventory': node_inventory,
-            'NodeStatus': node_status}
+    return {'LinkInventory': {'organization-information': build_organization_information(organization_id),
+                              'link-inventory-list': link_inventory},
+            'LinkStatus': {'organization-information': build_organization_information(organization_id),
+                              'link-inventory-list': link_status},
+            'NodeInventory': {'organization-information': build_organization_information(organization_id),
+                              'link-inventory-list': node_inventory},
+            'NodeStatus': {'organization-information': build_organization_information(organization_id),
+                              'link-inventory-list': node_status}}
 
 def separator():
     return WINDOWS_ENCODING if SYSTEM_TYPE == 'windows' else UNIX_ENCODING
