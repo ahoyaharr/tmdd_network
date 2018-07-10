@@ -36,6 +36,15 @@ def build_organization_information(organization_id):
 def build_update_time():
     return {'date': str(datetime.date.today()), 'time': str(datetime.datetime.now().time()), 'offset': -8}
 
+def road_to_tmdd(road_type):
+    """
+    Converts Aimsun road types to TMDD valid field type.
+    :param type: A string of the Aimsun road type.
+    """
+    aimsun_to_tmdd = {'street': 'arterial', 'freeway hov lane': 'dedicated-hov-link', 'off ramp': 'off-ramp',
+                      'on ramp': 'on-ramp', 'light rail track': 'railroad link', 'freeway connector': 'freeway'}
+    return aimsun_to_tmdd[road_type] if road_type in aimsun_to_tmdd else road_type
+
 def build_tmdd_map(model, organization_id, network_id, network_name):
     def build_node_inventory_element(junction_object):
         element = dict()
@@ -63,7 +72,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['network-name'] = network_name  # Required
         element['link-id'] = str(section_object.getId())  # Required 
         element['link-name'] = section_object.getName()
-        element['link-type'] = section_object.getRoadType().getName().lower()  # Required
+        element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())  # Required
         begin_node = section_object.getOrigin()
         if begin_node is not None:
             element['link-begin-node-id'] = str(begin_node.getId())  # Required
@@ -128,7 +137,7 @@ def build_json(model, path, organization_id, network_id, network_name):
 
     tmdd_json = json.dumps(tmdd_map, indent=2)
 
-    tmdd_path = path + separator() + 'tmdd_1.json'
+    tmdd_path = path + separator() + 'tmdd.json'
     print 'Writing', tmdd_path
     with open (tmdd_path, 'w') as text_file:
         text_file.write(tmdd_json)
