@@ -123,11 +123,11 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
     return {'LinkInventory': {'organization-information': build_organization_information(organization_id),
                               'link-inventory-list': link_inventory},
             'LinkStatus': {'organization-information': build_organization_information(organization_id),
-                              'link-inventory-list': link_status},
+                              'link-status-list': link_status},
             'NodeInventory': {'organization-information': build_organization_information(organization_id),
-                              'link-inventory-list': node_inventory},
+                              'node-inventory-list': node_inventory},
             'NodeStatus': {'organization-information': build_organization_information(organization_id),
-                              'link-inventory-list': node_status}}
+                              'node-status-list': node_status}}
 
 def separator():
     return WINDOWS_ENCODING if SYSTEM_TYPE == 'windows' else UNIX_ENCODING
