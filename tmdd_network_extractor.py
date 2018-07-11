@@ -2,15 +2,9 @@ from PyANGBasic import *
 from PyANGKernel import *
 from PyANGGui import *
 from PyANGAimsun import *
-#from AAPI import *
 
 import datetime
-import pickle
-import sys
-import csv
-import os
 import json
-import math
 
 WINDOWS_ENCODING = '\\'
 UNIX_ENCODING = '/'
@@ -132,12 +126,12 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
 def separator():
     return WINDOWS_ENCODING if SYSTEM_TYPE == 'windows' else UNIX_ENCODING
 
-def build_json(model, path, organization_id, network_id, network_name):
+def build_json(model, path, filename, organization_id, network_id, network_name):
     tmdd_map = build_tmdd_map(model, organization_id, network_id, network_name)
 
     tmdd_json = json.dumps(tmdd_map, indent=2)
 
-    tmdd_path = path + separator() + 'tmdd.json'
+    tmdd_path = path + separator() + filename + '.json'
     print 'Writing', tmdd_path
     with open (tmdd_path, 'w') as text_file:
         text_file.write(tmdd_json)
@@ -147,4 +141,4 @@ model = gui.getActiveModel()
 
 path='C:\Users\Serena\connected_corridors\\tmdd_network\data'
 
-build_json(model, path, 'connected_corridors', '409', 'tmdd_network')
+build_json(model, path, 'connected_corridors', 'tmdd', '409', 'tmdd_network')
