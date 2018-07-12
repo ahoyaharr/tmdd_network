@@ -139,6 +139,5 @@ def build_json(model, path, filename, organization_id, network_id, network_name)
 gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
-path='C:\Users\Serena\connected_corridors\\tmdd_network\data'
-
+path = io.get_script_path('tmdd_exports')
 build_json(model, path, 'connected_corridors', 'tmdd', '409', 'tmdd_network')
