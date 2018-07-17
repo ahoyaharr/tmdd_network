@@ -48,6 +48,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['node-name'] = junction_object.getName()
         element['node-location'] = build_geolocation(translator, junction_object.getPosition())
         element['last-update-time'] = build_update_time()
+
         return element
 
     def build_node_status_element(junction_object):
@@ -71,6 +72,8 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         if begin_node is not None:
             element['link-begin-node-id'] = str(begin_node.getId())  # Required
             element['link-begin-node-location'] = build_geolocation(translator, begin_node.getPosition())  # Required
+            city = model.getType("GKDPoint").getColumn("GKDPoint::CITY", GKType.eSearchOnlyThisType)
+            element['link-jurisdiction'] = begin_node.getDataValue(city)[0] if (begin_node.getDataValue(city)[0]) is not None else "Data not provided"
         else:
             element['link-begin-node-id'] = 'None'
             element['link-begin-node-location'] = {'latitude': 0.0, 'longitude': 0.0}
@@ -139,5 +142,5 @@ def build_json(model, path, filename, organization_id, network_id, network_name)
 gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
-path = io.get_script_path('tmdd_exports')
+path = 'C:\Users\serena\connected_corridors\\tmdd_network\data'
 build_json(model, path, 'connected_corridors', 'tmdd', '409', 'tmdd_network')
