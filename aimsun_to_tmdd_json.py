@@ -28,7 +28,7 @@ def build_organization_information(organization_id):
     return {'organization-id': organization_id}
 
 def build_update_time():
-    return {'date': str(datetime.date.today()), 'time': str(datetime.datetime.now().time()), 'offset': -8}
+    return {'date': str(datetime.date.today()), 'time': str(datetime.datetime.now().time()), 'offset': '-8'}
 
 def road_to_tmdd(road_type):
     """
@@ -48,6 +48,8 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['node-name'] = junction_object.getName()
         element['node-location'] = build_geolocation(translator, junction_object.getPosition())
         element['last-update-time'] = build_update_time()
+        # signalized = model.getType("GKNode").getColumn("GKNode:signalizedIntersection", GKType.eSearchOnlyThisType)
+        # element['node-description'] = "Signalized" if signalized else "Not signalized"
 
         return element
 
@@ -68,6 +70,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['link-id'] = str(section_object.getId())  # Required 
         element['link-name'] = section_object.getName()
         element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())  # Required
+        element['link-capacity'] = int(section_object.getCapacity())
         begin_node = section_object.getOrigin()
         if begin_node is not None:
             element['link-begin-node-id'] = str(begin_node.getId())  # Required
@@ -100,6 +103,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['link-name'] = section_object.getName()
         element['link-status'] = 'no determination' 
         element['last-update-time'] = build_update_time()
+        element['link-lanes-count'] = section_object.getNbFullLanes()
         return element
 
     link_inventory = []
@@ -143,4 +147,4 @@ gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
 path = 'C:\Users\serena\connected_corridors\\tmdd_network\data'
-build_json(model, path, 'connected_corridors', 'tmdd', '409', 'tmdd_network')
+build_json(model, path, 'tmdd_v00', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v00')
