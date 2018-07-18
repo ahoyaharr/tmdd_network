@@ -75,6 +75,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['link-name'] = section_object.getName()
         element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())
         element['link-capacity'] = int(section_object.getCapacity())
+        element['link-length'] = max((section_object.getLaneLength(i) for i in range(len(section_object.getLanes()))))
 
         """ Build the link geometry, sans the source and target nodes. """
         element['link-geom-location'] = [build_geolocation(translator, point) for point in section_object.calculatePolyline()]
