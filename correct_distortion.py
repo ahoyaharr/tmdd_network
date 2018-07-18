@@ -60,7 +60,6 @@ class CorrectionZone:
             print(s)
 
         """ construct each transformation matrix. """
-        print(list(itertools.product(range(vertical_zones), range(horizontal_zones))))
         for i, j in itertools.product(range(vertical_zones), range(horizontal_zones)):
             source = source_bucket[i][j]
             target = target_bucket[i][j]
@@ -113,31 +112,35 @@ class CorrectionZone:
         return [minimum + (i * bucket_size) for i in range(1, zone_count + 1)]
 
 
-cz = CorrectionZone(2, 2)
+cz = CorrectionZone(2, 1)
 
-tmdd_object_system = json.loads(io.get_JSON_strings()['tmdd'])
+unprocessed_json = io.get_JSON_strings()
 
-""" 
-transform and update each coordinate in the tmdd network.
+for key in filter(lambda name: 'corrected' not in name, unprocessed_json.keys()):
+    print('Correcting', key)
+    tmdd_object_system = json.loads(unprocessed_json[key])
 
-fields to transform:
-LinkInventory -> link-inventory-list -> link-begin-node-location -> p
-                                     -> link-end-node-location -> p
-                                     -> link-geom-location -> [p1, ..., pn]
+    """ 
+    transform and update each coordinate in the tmdd network.
+    
+    fields to transform:
+    LinkInventory -> link-inventory-list -> link-begin-node-location -> p
+                                         -> link-end-node-location -> p
+                                         -> link-geom-location -> [p1, ..., pn]
+    
+    NodeInventory -> node-inventory-list -> node-location -> p
+    
+    """
+    link_inventory = tmdd_object_system['LinkInventory']['link-inventory-list']
+    node_inventory = tmdd_object_system['NodeInventory']['node-inventory-list']
 
-NodeInventory -> node-inventory-list -> node-location -> p
+    for link in link_inventory:
+        link['link-begin-node-location'] = cz.correct_point(link['link-begin-node-location'])
+        link['link-end-node-location'] = cz.correct_point(link['link-end-node-location'])
+        link['link-geom-location'] = [cz.correct_point(p) for p in link['link-geom-location']]
 
-"""
-link_inventory = tmdd_object_system['LinkInventory']['link-inventory-list']
-node_inventory = tmdd_object_system['NodeInventory']['node-inventory-list']
+    for node in node_inventory:
+        node['node-location'] = cz.correct_point(node['node-location'])
 
-for link in link_inventory:
-    link['link-begin-node-location'] = cz.correct_point(link['link-begin-node-location'])
-    link['link-end-node-location'] = cz.correct_point(link['link-end-node-location'])
-    link['link-geom-location'] = [cz.correct_point(p) for p in link['link-geom-location']]
-
-for node in node_inventory:
-    node['node-location'] = cz.correct_point(node['node-location'])
-
-path = io.get_script_path('data')
-io.write_tmdd_json(tmdd_object_system, path, 'tmdd_corrected')
+    path = io.get_script_path('data')
+    io.write_tmdd_json(tmdd_object_system, path, key + '_corrected_' + str(cz.horizontal_zones) + 'x' + str(cz.vertical_zones))
