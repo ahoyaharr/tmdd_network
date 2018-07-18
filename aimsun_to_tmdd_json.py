@@ -78,7 +78,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['link-name'] = section_object.getName()
         element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())
         element['link-capacity'] = int(section_object.getCapacity())
-        element['link-length'] = get_section_length(section_object)
+        element['link-length'] = get_section_length(section_object) # units: meters
 
         """ Build the link geometry, sans the source and target nodes. """
         element['link-geom-location'] = [build_geolocation(translator, point) for point in section_object.calculatePolyline()]
@@ -133,10 +133,9 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['route-link-id-list'] = [str(so.getId()) for so in subpath_object.getRoute()]
         element['route-type'] = 'detour'  # All SubPaths in models are for rerouting traffic
         element['route-name'] = subpath_object.getName()
-        element['route-length'] = sum(get_section_length(so) for so in subpath_object.getRoute())
-        element['3D-length'] = subpath_object.length3D()
-        print('route-length:', element['route-length'], '\n', '3D-length', element['3D-length'])
+        element['route-length'] = subpath_object.length3D() # units: meters
         element['last-update-time'] = build_update_time()
+        return element
 
     link_inventory = []
     link_status = []
@@ -156,7 +155,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
 
     for types in model.getCatalog().getUsedSubTypesFromType(model.getType('GKSubPath')):
         for subpath_object in types.itervalues():
-            if 'detour' in subpath_object.getName():
+            if reduce(lambda prev, name: prev or name in subpath_object.getName(), ['EB_', 'WB_'], False):
                 route_inventory.append(build_detour_route_inventory_element(subpath_object))
 
 
@@ -167,8 +166,8 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             'NodeInventory': {'organization-information': build_organization_information(organization_id),
                               'node-inventory-list': node_inventory},
             'NodeStatus': {'organization-information': build_organization_information(organization_id),
-                              'node-status-list': node_status}
-            'RouteInventory': {'organization-information': build_organization_information(organization_id),
+                              'node-status-list': node_status},
+            'RouteInventory': {'organization-information': build_organization_information(organization_id), 
                               'route-inventory-list': route_inventory}}
 
 def separator():
@@ -188,4 +187,4 @@ gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
 path = 'C:\Users\serena\connected_corridors\\tmdd_network\data'
-build_json(model, path, 'tmdd_v00', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v00')
+build_json(model, path, 'tmdd_v01', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v01')
