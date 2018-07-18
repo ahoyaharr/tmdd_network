@@ -13,14 +13,16 @@ SYSTEM_TYPE = 'windows'
 
 MPH_CONSTANT = 0.62137119 # multiply km/hr to convert to mph
 
+DUMMY_ID = 0
+
 translator = GKCoordinateTranslator(model)    
 
 
 def build_geolocation(translator, coordinate_pair):
-    '''
+    """
     Converts an untranslated coordinate pair into a dictionary
     mapping 'lon'/'lat' -> coordinate value.
-    '''
+    """
     coordinate = translator.toDegrees(coordinate_pair)
     return {'longitude': coordinate.x, 'latitude': coordinate.y}
 
@@ -55,22 +57,30 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
 
     def build_node_status_element(junction_object):
         element = dict()
-        element['network-id'] = network_id  # Required
-        element['network-name'] = network_name  # Required
-        element['node-id'] = str(junction_object.getId())  # Required 
+        element['network-id'] = network_id
+        element['network-name'] = network_name
+        element['node-id'] = str(junction_object.getId())
         element['node-name'] = junction_object.getName()
         element['last-update-time'] = build_update_time()
         element['node-status'] = 'no determination'
         return element 
 
     def build_link_inventory_element(section_object):
+        global DUMMY_ID
+
         element = dict()
-        element['network-id'] = network_id  # Required
-        element['network-name'] = network_name  # Required
-        element['link-id'] = str(section_object.getId())  # Required 
+        element['network-id'] = network_id
+        element['network-name'] = network_name
+        element['link-id'] = str(section_object.getId())
         element['link-name'] = section_object.getName()
-        element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())  # Required
+        element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())
         element['link-capacity'] = int(section_object.getCapacity())
+
+        """ Build the link geometry, sans the source and target nodes. """
+        element['link-geom-location'] = [build_geolocation(translator, point) for point in section_object.calculatePolyline()]
+
+        """ Find and update the source/target nodes, if they exist. If they do not exist, create a symbolic
+        node with location equal to the beginning/end point in the link geometry. """
         begin_node = section_object.getOrigin()
         if begin_node is not None:
             element['link-begin-node-id'] = str(begin_node.getId())  # Required
@@ -78,21 +88,26 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             city = model.getType("GKDPoint").getColumn("GKDPoint::CITY", GKType.eSearchOnlyThisType)
             element['link-jurisdiction'] = begin_node.getDataValue(city)[0] if (begin_node.getDataValue(city)[0]) is not None else "Data not provided"
         else:
-            element['link-begin-node-id'] = 'None'
-            element['link-begin-node-location'] = {'latitude': 0.0, 'longitude': 0.0}
+            DUMMY_ID = DUMMY_ID + 1
+            element['link-begin-node-id'] = 'dummy' + str(DUMMY_ID)
+            element['link-begin-node-location'] = element['link-geom-location'][0]
         end_node = section_object.getDestination()
         if end_node is not None:
             element['link-end-node-id'] = str(end_node.getId())  # Required
             element['link-end-node-location'] = build_geolocation(translator, end_node.getPosition())  # Required
         else:
-            element['link-end-node-id'] = 'None'
-            element['link-end-node-location'] = {'latitude': 0.0, 'longitude': 0.0}
+            DUMMY_ID = DUMMY_ID + 1
+            element['link-end-node-id'] = 'dummy' + str(DUMMY_ID)
+            element['link-end-node-location'] = element['link-geom-location'][-1]
+
+        """ After the source/target nodes are updated, append them to the link geometry. """
+        element['link-geom-location'].append(element['link-end-node-location'])
+        element['link-geom-location'].insert(0, element['link-begin-node-location'])
+
         element['link-speed-limit'] = section_object.getSpeed() * MPH_CONSTANT
         element['link-speed-limit-units'] = 'miles per hour'
         element['last-update-time'] = build_update_time()
-        element['link-geom-location'] = [build_geolocation(translator, point) for point in section_object.calculatePolyline()]
-        element['link-geom-location'].append(element['link-end-node-location'])
-        element['link-geom-location'].insert(0, element['link-begin-node-location'])
+
         return element
 
     def build_link_status_element(section_object):
