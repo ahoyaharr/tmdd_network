@@ -41,6 +41,9 @@ def road_to_tmdd(road_type):
                       'on ramp': 'on-ramp', 'light rail track': 'railroad link', 'freeway connector': 'freeway'}
     return aimsun_to_tmdd[road_type] if road_type in aimsun_to_tmdd else road_type
 
+def get_section_length(section_object):
+    return max((section_object.getLaneLength(i) for i in range(len(section_object.getLanes()))))
+
 def build_tmdd_map(model, organization_id, network_id, network_name):
     def build_node_inventory_element(junction_object):
         element = dict()
@@ -75,7 +78,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['link-name'] = section_object.getName()
         element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())
         element['link-capacity'] = int(section_object.getCapacity())
-        element['link-length'] = max((section_object.getLaneLength(i) for i in range(len(section_object.getLanes()))))
+        element['link-length'] = get_section_length(section_object)
 
         """ Build the link geometry, sans the source and target nodes. """
         element['link-geom-location'] = [build_geolocation(translator, point) for point in section_object.calculatePolyline()]
@@ -113,19 +116,33 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
 
     def build_link_status_element(section_object):
         element = dict()
-        element['network-id'] = network_id  # Required
-        element['network-name'] = network_name  # Required
-        element['link-id'] = str(section_object.getId())  # Required 
+        element['network-id'] = network_id  
+        element['network-name'] = network_name  
+        element['link-id'] = str(section_object.getId())  
         element['link-name'] = section_object.getName()
         element['link-status'] = 'no determination' 
         element['last-update-time'] = build_update_time()
         element['link-lanes-count'] = section_object.getNbFullLanes()
         return element
 
+    def build_detour_route_inventory_element(subpath_object):
+        element = dict()
+        element['network-id'] = network_id
+        element['network_name'] = network_name
+        element['route-id'] = subpath_object.getId()
+        element['route-link-id-list'] = [str(so.getId()) for so in subpath_object.getRoute()]
+        element['route-type'] = 'detour'  # All SubPaths in models are for rerouting traffic
+        element['route-name'] = subpath_object.getName()
+        element['route-length'] = sum(get_section_length(so) for so in subpath_object.getRoute())
+        element['3D-length'] = subpath_object.length3D()
+        print('route-length:', element['route-length'], '\n', '3D-length', element['3D-length'])
+        element['last-update-time'] = build_update_time()
+
     link_inventory = []
     link_status = []
     node_inventory = []
     node_status = []
+    route_inventory = []
 
     for types in model.getCatalog().getUsedSubTypesFromType(model.getType('GKSection')):
         for section_object in types.itervalues():
@@ -137,6 +154,12 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             node_inventory.append(build_node_inventory_element(junction_object))
             node_status.append(build_node_status_element(junction_object))
 
+    for types in model.getCatalog().getUsedSubTypesFromType(model.getType('GKSubPath')):
+        for subpath_object in types.itervalues():
+            if 'detour' in subpath_object.getName():
+                route_inventory.append(build_detour_route_inventory_element(subpath_object))
+
+
     return {'LinkInventory': {'organization-information': build_organization_information(organization_id),
                               'link-inventory-list': link_inventory},
             'LinkStatus': {'organization-information': build_organization_information(organization_id),
@@ -144,7 +167,9 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             'NodeInventory': {'organization-information': build_organization_information(organization_id),
                               'node-inventory-list': node_inventory},
             'NodeStatus': {'organization-information': build_organization_information(organization_id),
-                              'node-status-list': node_status}}
+                              'node-status-list': node_status}
+            'RouteInventory': {'organization-information': build_organization_information(organization_id),
+                              'route-inventory-list': route_inventory}}
 
 def separator():
     return WINDOWS_ENCODING if SYSTEM_TYPE == 'windows' else UNIX_ENCODING
