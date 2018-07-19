@@ -2,6 +2,7 @@ import copy
 import csv
 import itertools
 import json
+import argparse
 
 import numpy as np
 
@@ -112,7 +113,14 @@ class CorrectionZone:
         return [minimum + (i * bucket_size) for i in range(1, zone_count + 1)]
 
 
-cz = CorrectionZone(2, 1)
+parser = argparse.ArgumentParser()
+parser.add_argument("-horizontal", type=int,
+                    help="the number of horizontal zones")
+parser.add_argument("-vertical", type=int,
+                    help="the number of vertical zones")
+args = parser.parse_args()
+
+cz = CorrectionZone(args.horizontal, args.vertical)
 
 unprocessed_json = io.get_JSON_strings()
 
