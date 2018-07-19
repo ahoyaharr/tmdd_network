@@ -120,6 +120,8 @@ parser.add_argument("-vertical", type=int,
                     help="the number of vertical zones")
 args = parser.parse_args()
 
+assert args.horizontal and args.vertical, "-h, -v are required. example usage: \'py correct_distortion.py -h 2 -v 1\'"
+
 cz = CorrectionZone(args.horizontal, args.vertical)
 
 unprocessed_json = io.get_JSON_strings()
