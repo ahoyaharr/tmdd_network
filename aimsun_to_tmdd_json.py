@@ -5,6 +5,7 @@ from PyANGAimsun import *
 
 import datetime
 import json
+import os
 
 WINDOWS_ENCODING = '\\'
 UNIX_ENCODING = '/'
@@ -90,7 +91,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             element['link-begin-node-id'] = str(begin_node.getId())  # Required
             element['link-begin-node-location'] = build_geolocation(translator, begin_node.getPosition())  # Required
             city = model.getType("GKDPoint").getColumn("GKDPoint::CITY", GKType.eSearchOnlyThisType)
-            element['link-jurisdiction'] = begin_node.getDataValue(city)[0] if (begin_node.getDataValue(city)[0]) is not None else "Data not provided"
+            #element['link-jurisdiction'] = begin_node.getDataValue(city)[0] if (begin_node.getDataValue(city)[0]) is not None else "Data not provided"
         else:
             DUMMY_ID = DUMMY_ID + 1
             element['link-begin-node-id'] = 'dummy' + str(DUMMY_ID)
@@ -186,5 +187,5 @@ def build_json(model, path, filename, organization_id, network_id, network_name)
 gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
-path = 'C:\Users\serena\connected_corridors\\tmdd_network\data'
-build_json(model, path, 'tmdd_v01', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v01')
+path = os.getenv('APPDATA') + separator() + 'Aimsun' + separator() + 'Aimsun Next' + separator() + '8.2.0' + separator() + 'shared'
+build_json(model, path, 'tmdd_v02', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v02')
