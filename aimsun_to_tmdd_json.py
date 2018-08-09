@@ -56,8 +56,31 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['last-update-time'] = build_update_time()
         # signalized = model.getType("GKNode").getColumn("GKNode:signalizedIntersection", GKType.eSearchOnlyThisType)
         # element['node-description'] = "Signalized" if signalized else "Not signalized"
-
         return element
+      
+    def build_dummy_node_element(link_element, begin):
+        """
+        link_element: dictionary containing information about a link inventory element
+        begin: boolean value; TRUE if dummy is an origin node, else FALSE
+        """
+        position = 'begin' if begin else 'end'
+        node_inventory.append({
+              'network-id': link_element['network-id'],
+              'network-name': link_element['network-name'],
+              'node-id': link_element['link-{0}-node-id'.format(position)],
+              'node-name': 'dummy_{0}_{1}'.format(position, link_element['link-name']),
+              'node-location': link_element['link-{0}-node-location'.format(position)],
+              'last-update-time': build_update_time()
+            })
+        node_status.append({
+              'network-id': link_element['network-id'],
+              'network-name': link_element['network-name'],
+              'node-id': link_element['link-{0}-node-id'.format(position)],
+              'node-name': 'dummy_{0}_{1}'.format(position, link_element['link-name']),
+              'last-update-time': build_update_time(),
+              'node-status': 'no determination'
+            })
+      
 
     def build_node_status_element(junction_object):
         element = dict()
@@ -90,12 +113,14 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         if begin_node is not None:
             element['link-begin-node-id'] = str(begin_node.getId())  # Required
             element['link-begin-node-location'] = build_geolocation(translator, begin_node.getPosition())  # Required
-            city = model.getType("GKDPoint").getColumn("GKDPoint::CITY", GKType.eSearchOnlyThisType)
-            #element['link-jurisdiction'] = begin_node.getDataValue(city)[0] if (begin_node.getDataValue(city)[0]) is not None else "Data not provided"
+            # city = model.getType("GKDPoint").getColumn("GKDPoint::CITY", GKType.eSearchOnlyThisType)
+            # element['link-jurisdiction'] = begin_node.getDataValue(city)[0] if (begin_node.getDataValue(city)[0]) is not None else "Data not provided"
         else:
             DUMMY_ID = DUMMY_ID + 1
             element['link-begin-node-id'] = 'dummy' + str(DUMMY_ID)
             element['link-begin-node-location'] = element['link-geom-location'][0]
+            build_dummy_node_element(element, begin=True)
+            
         end_node = section_object.getDestination()
         if end_node is not None:
             element['link-end-node-id'] = str(end_node.getId())  # Required
@@ -104,6 +129,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             DUMMY_ID = DUMMY_ID + 1
             element['link-end-node-id'] = 'dummy' + str(DUMMY_ID)
             element['link-end-node-location'] = element['link-geom-location'][-1]
+            build_dummy_node_element(element, begin=False)
 
         """ After the source/target nodes are updated, append them to the link geometry. """
         element['link-geom-location'].append(element['link-end-node-location'])
