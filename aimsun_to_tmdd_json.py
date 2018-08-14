@@ -2,6 +2,7 @@ from PyANGBasic import *
 from PyANGKernel import *
 from PyANGGui import *
 from PyANGAimsun import *
+from functools import reduce
 
 import datetime
 import json
@@ -185,6 +186,28 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
             if reduce(lambda prev, name: prev or name in subpath_object.getName(), ['EB_', 'WB_'], False):
                 route_inventory.append(build_detour_route_inventory_element(subpath_object))
 
+    """ A valid link must not be circular. Find all circular links by looking through link_inventory. """
+    circular_links = reduce(
+        lambda redundant, link: redundant + [link['link-id']] if link['link-begin-node-id'] == link['link-end-node-id'] else redundant,
+        link_inventory,
+        list())
+
+    circular_link_predicate = lambda link: link['link-id'] not in circular_links
+
+
+    """ A railway is not a valid link. Filter out all railroad links. """
+    rail_links = reduce(
+        lambda railway, link: railway + [link['link-id']] if link['link-type'] == 'railroad link' else railway,
+        link_inventory,
+        list())
+
+    railroad_predicate = lambda link: link['link-id'] not in rail_links
+
+
+    """ Filter invalid links. """
+    link_inventory = list(filter(lambda link: circular_link_predicate(link) and railroad_predicate(link), link_inventory))
+    link_status = list(filter(lambda link: circular_link_predicate(link) and railroad_predicate(link), link_status))
+
 
     return {'LinkInventory': {'organization-information': build_organization_information(organization_id),
                               'link-inventory-list': link_inventory},
@@ -214,4 +237,4 @@ gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
 path = os.getenv('APPDATA') + separator() + 'Aimsun' + separator() + 'Aimsun Next' + separator() + '8.2.0' + separator() + 'shared'
-build_json(model, path, 'tmdd_v02', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v02')
+build_json(model, path, 'tmdd_v03', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v03')
