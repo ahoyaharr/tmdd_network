@@ -8,6 +8,9 @@ import numpy as np
 
 import local_io as io
 
+DIGIT_PRECISION = 7
+FORMAT = True
+# if true, formats lon and lat to TMDD standards
 
 class CorrectionZone:
     def __init__(self, horizontal_zones=1, vertical_zones=1):
@@ -89,12 +92,15 @@ class CorrectionZone:
 
         return lat_index, lon_index
 
-    def correct_point(self, p):
+    def correct_point(self, p, formatted):
         p_as_list = [p['longitude'], p['latitude'], 1]
         i, j = self.__bucket_index(p_as_list)
         # print(p_as_list, self.transformation_matrices[i][j])
         transformed = np.dot(p_as_list, self.transformation_matrices[i][j])
-        return {'longitude': transformed[0], 'latitude': transformed[1]}
+        to_return = {'longitude': transformed[0], 'latitude': transformed[1]}
+        if formatted:
+            to_return = format_coordinate(to_return)
+        return to_return
 
     @staticmethod
     def __load_data(file):
@@ -111,6 +117,18 @@ class CorrectionZone:
         """
         bucket_size = (maximum - minimum) / zone_count
         return [minimum + (i * bucket_size) for i in range(1, zone_count + 1)]
+
+
+def format_coordinate(coord):
+    """
+    Formats the longitude and latitude to fit TMDD Standards.
+    Ex/ 34.12141827922749 -> 341214183
+        -117.88760143698057 -> -1178876014
+
+    :param coord: a dictionary of longitude and latitude mapping to the corresponding coordinate
+    """
+    return {'longitude': int(round(coord['longitude'] * 10 ** DIGIT_PRECISION)), \
+            'latitude': int(round(coord['latitude'] * 10 ** DIGIT_PRECISION))}
 
 
 parser = argparse.ArgumentParser()
@@ -145,12 +163,12 @@ for key in filter(lambda name: 'corrected' not in name, unprocessed_json.keys())
     node_inventory = tmdd_object_system['NodeInventory']['node-inventory-list']
 
     for link in link_inventory:
-        link['link-begin-node-location'] = cz.correct_point(link['link-begin-node-location'])
-        link['link-end-node-location'] = cz.correct_point(link['link-end-node-location'])
-        link['link-geom-location'] = [cz.correct_point(p) for p in link['link-geom-location']]
+        link['link-begin-node-location'] = cz.correct_point(link['link-begin-node-location'], FORMAT)
+        link['link-end-node-location'] = cz.correct_point(link['link-end-node-location'], FORMAT)
+        link['link-geom-location'] = [cz.correct_point(p, FORMAT) for p in link['link-geom-location']]
 
     for node in node_inventory:
-        node['node-location'] = cz.correct_point(node['node-location'])
+        node['node-location'] = cz.correct_point(node['node-location'], FORMAT)
 
     path = io.get_script_path('data')
     io.write_tmdd_json(tmdd_object_system, path, key + '_corrected_' + str(cz.horizontal_zones) + 'x' + str(cz.vertical_zones))
