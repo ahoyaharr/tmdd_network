@@ -16,6 +16,7 @@ SYSTEM_TYPE = 'windows'
 MPH_CONSTANT = 0.62137119 # multiply km/hr to convert to mph
 
 DUMMY_ID = 0
+DIGIT_PRECISION = 7
 
 translator = GKCoordinateTranslator(model)    
 
@@ -29,10 +30,11 @@ def build_geolocation(translator, coordinate_pair):
     return {'longitude': coordinate.x, 'latitude': coordinate.y}
 
 def build_organization_information(organization_id):
-    return {'organization-id': organization_id}
+    return {'organization-id': organization_id, 'last-update-time': build_update_time()}
 
 def build_update_time():
-    return {'date': str(datetime.date.today()), 'time': str(datetime.datetime.now().time()), 'offset': '-8'}
+    return {'date': datetime.date.today().strftime("%Y%m%d"), \
+            'time': datetime.datetime.now().strftime("%H%M%S%f")[:10]}
 
 def road_to_tmdd(road_type):
     """
@@ -45,6 +47,24 @@ def road_to_tmdd(road_type):
 
 def get_section_length(section_object):
     return max((section_object.getLaneLength(i) for i in range(len(section_object.getLanes()))))
+
+def get_turnbay_length(section_object, flag):
+    """
+    Not used.
+    :param flag: Indicates whether we want the left or right turning bay.
+    """
+    lanes = section_object.getLanes()
+    num_lanes = len(lanes)
+    turn_bay = 0 if (flag == 'left') else (num_lanes - 1)
+
+    if not lanes[turn_bay].isFullLane():
+        return int(round(lanes[turn_bay].getLength())) # units: meters
+    else:
+        return 0
+
+def build_link_restrictions(section_object):
+    return {'link-speed-limit': int(round((section_object.getSpeed() * MPH_CONSTANT))), \
+            'link-speed-limit-units': 'miles-per-hour'}
 
 def build_tmdd_map(model, organization_id, network_id, network_name):
     def build_node_inventory_element(junction_object):
@@ -103,7 +123,8 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['link-name'] = section_object.getName()
         element['link-type'] = road_to_tmdd(section_object.getRoadType().getName().lower())
         element['link-capacity'] = int(section_object.getCapacity())
-        element['link-length'] = get_section_length(section_object) # units: meters
+        element['link-length'] = int(round(get_section_length(section_object))) # units: meters
+        element['link-restrictions'] = build_link_restrictions(section_object)
 
         """ Build the link geometry, sans the source and target nodes. """
         element['link-geom-location'] = [build_geolocation(translator, point) for point in section_object.calculatePolyline()]
@@ -136,8 +157,6 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['link-geom-location'].append(element['link-end-node-location'])
         element['link-geom-location'].insert(0, element['link-begin-node-location'])
 
-        element['link-speed-limit'] = section_object.getSpeed() * MPH_CONSTANT
-        element['link-speed-limit-units'] = 'miles per hour'
         element['last-update-time'] = build_update_time()
 
         return element
@@ -145,12 +164,11 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
     def build_link_status_element(section_object):
         element = dict()
         element['network-id'] = network_id  
-        element['network-name'] = network_name  
         element['link-id'] = str(section_object.getId())  
         element['link-name'] = section_object.getName()
         element['link-status'] = 'no determination' 
         element['last-update-time'] = build_update_time()
-        element['link-lanes-count'] = section_object.getNbFullLanes()
+        element['lanes-number-open'] = section_object.getNbFullLanes()
         return element
 
     def build_detour_route_inventory_element(subpath_object):
@@ -161,7 +179,7 @@ def build_tmdd_map(model, organization_id, network_id, network_name):
         element['route-link-id-list'] = [str(so.getId()) for so in subpath_object.getRoute()]
         element['route-type'] = 'detour'  # All SubPaths in models are for rerouting traffic
         element['route-name'] = subpath_object.getName()
-        element['route-length'] = subpath_object.length3D() # units: meters
+        element['route-length'] = int(round(subpath_object.length3D())) # units: meters
         element['last-update-time'] = build_update_time()
         return element
 
@@ -237,4 +255,4 @@ gui=GKGUISystem.getGUISystem().getActiveGui()
 model = gui.getActiveModel()
 
 path = os.getenv('APPDATA') + separator() + 'Aimsun' + separator() + 'Aimsun Next' + separator() + '8.2.0' + separator() + 'shared'
-build_json(model, path, 'tmdd_v03', 'PATH Connected Corridors', '2018-06-14a', 'I-210 Pilot Aimsun TMDD Network v03')
+build_json(model, path, 'tmdd_v04', 'PATH Connected Corridors', '2018-10-4e', 'I-210 Pilot Aimsun TMDD Network v04')
